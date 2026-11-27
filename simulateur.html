@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulateur du fonds d’urgence renouvelable</title>
+<style>
+:root{--bg:#f4f7fb;--fg:#0f1b2d;--mut:#55627a;--line:#cfd9e8;--a:#1d4f91;--b:#c2412d;--soft:#e4edf8}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1626;--fg:#e8eef8;--mut:#9fb0c9;--line:#26344d;--a:#7fb4ec;--b:#ee8a78;--soft:#15233a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:20px 16px 48px}
+main{max-width:640px;margin:0 auto}
+h1,h2,.big{font-family:Georgia,"Times New Roman",serif;font-weight:700;letter-spacing:-.01em}
+h1{font-size:1.65rem;line-height:1.2;margin:.2em 0 .3em}
+h2{font-size:1.15rem;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--line)}
+.sub{color:var(--mut);margin:0 0 1em;font-size:.95rem}
+.hero{margin:1em 0}
+.hero svg{width:100%;height:auto;display:block}
+.hero .a{stroke:var(--a)}.hero .b{stroke:var(--b)}
+.hero line.g{stroke:var(--line)}
+.hero text{fill:var(--mut);font:11px system-ui,sans-serif}
+.hero text.ta{fill:var(--a);font-weight:700}.hero text.tb{fill:var(--b);font-weight:700}
+.res p{margin:.5em 0}
+.big{font-size:1.35rem;line-height:1.3}
+.ca{color:var(--a)}.cb{color:var(--b)}
+details{background:var(--soft);border-radius:8px;padding:10px 14px;margin:1em 0}
+summary{cursor:pointer;font-weight:600}
+ol{margin:.6em 0 0;padding-left:1.2em}li{margin:.35em 0}
+.f{margin:1.1em 0}.f label{display:flex;justify-content:space-between;gap:12px;font-weight:600}
+.f output{font-variant-numeric:tabular-nums;color:var(--a)}
+.f input[type=range]{width:100%;accent-color:var(--a);height:32px}
+.f p{margin:0;color:var(--mut);font-size:.9rem}
+.ck{display:flex;gap:10px;align-items:flex-start;margin:.9em 0}
+.ck input{width:22px;height:22px;margin-top:2px;accent-color:var(--a)}
+.ck span{color:var(--mut);font-size:.92rem}
+.w{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:.8em 0}
+.w label{font-size:.82rem;color:var(--mut);display:block}
+.w input{width:100%;font:inherit;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{font-weight:600;color:var(--mut)}
+.ok{color:var(--a);font-weight:700}.no{color:var(--b);font-weight:700}
+footer{margin-top:2.5em;padding-top:1em;border-top:1px solid var(--line);color:var(--mut);font-size:.86rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Que devient un fonds d’urgence qui prête au lieu de donner ?</h1>
+<p class="sub">Simulateur du fonds renouvelable proposé pour Columbia GS. Les valeurs sont illustratives : bouge les curseurs et regarde le capital.</p>
+
+<section class="hero" aria-live="polite">
+<svg id="ch" viewBox="0 0 340 200" role="img" aria-label="Capital du fonds année par année, avec et sans garantie"></svg>
+</section>
+<section class="res" id="res"></section>
+
+<details><summary>Le modèle en six lignes</summary>
+<ol>
+<li>Chaque étudiant a trois signaux : loyer payé régulièrement, stabilité d’emploi, assiduité. Le score est leur moyenne pondérée.</li>
+<li>Au-dessus du seuil, l’étudiant reçoit un prêt. Un moins le score moyen des approuvés donne le risque de défaut (convention du modèle).</li>
+<li>Sur un prêt en défaut, on récupère une petite part. Le fonds retrouve donc moins que ce qu’il a prêté.</li>
+<li>Sans garantie, le fonds reprête ce qu’il récupère. Chaque année il est plus petit, donc il aide moins d’étudiants.</li>
+<li>Avec une garantie de première perte, un garant comble les pertes attendues. Le fonds reste entier.</li>
+<li>La valeur actuelle tient compte du fait qu’un dollar reçu plus tard vaut moins qu’un dollar aujourd’hui.</li>
+</ol></details>
+
+<h2>Les hypothèses du fonds</h2>
+<div id="inputs"></div>
+<label class="ck"><input type="checkbox" id="link" checked><span>Calculer le risque de défaut à partir du scoring ci-dessous</span></label>
+<label class="ck"><input type="checkbox" id="carry"><span>Garder dans le fonds la somme qui ne forme pas un prêt entier (désactivé : comme dans le tableur validé)</span></label>
+
+<h2>Le scoring de cinq profils</h2>
+<p class="sub">Score = moyenne pondérée des trois signaux, chacun ramené entre 0 et 1. Le risque de défaut est un moins le score moyen des étudiants approuvés.</p>
+<div class="w">
+<div><label for="w1">Poids loyer</label><input id="w1" type="number" step="0.001" value="0.411"></div>
+<div><label for="w2">Poids emploi</label><input id="w2" type="number" step="0.001" value="0.32248"></div>
+<div><label for="w3">Poids assiduité</label><input id="w3" type="number" step="0.001" value="0.26652"></div>
+<div><label for="th">Seuil</label><input id="th" type="number" step="0.01" value="0.6"></div>
+</div>
+<div class="tw"><table><thead><tr><th>Profil</th><th>Loyer %</th><th>Emploi (mois)</th><th>Assiduité %</th><th>Score</th><th>Décision</th></tr></thead><tbody id="sc"></tbody></table></div>
+<p id="scn" class="sub"></p>
+
+<h2>Année par année</h2>
+<div class="tw"><table><thead><tr><th>Année</th><th>Capital sans garantie</th><th>Étudiants</th><th>Capital avec garantie</th><th>Étudiants</th></tr></thead><tbody id="tb"></tbody></table></div>
+
+<footer>
+<p>Version du 27 novembre 2026. Page construite avec Claude (Anthropic) à partir de mon modèle : les hypothèses et le raisonnement sont les miens. Valeurs illustratives, non validées sur des données réelles.</p>
+</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const usd=n=>Math.round(n).toLocaleString('fr-FR')+' $';
+const pc=v=>(v*100).toFixed(1).replace('.',',')+' %';
+const cfg=[
+["cap","Capital initial",50000,1000000,10000,300000,usd,"Argent mis dans le fonds au départ."],
+["loan","Prêt moyen",500,5000,100,1500,usd,"Montant avancé à chaque étudiant."],
+["pd","Risque de défaut",0,0.6,0.001,0.251,pc,"Part des prêts qui ne sont pas remboursés normalement."],
+["rec","Recouvrement",0,0.6,0.01,0.15,pc,"Part récupérée sur un prêt en défaut."],
+["cov","Garantie de première perte",0,1,0.05,1,pc,"Part des pertes comblée chaque année par un garant externe."],
+["disc","Taux d’actualisation",0,0.15,0.005,0.05,pc,"Un dollar reçu dans un an vaut moins qu’aujourd’hui."],
+["yrs","Durée en années",1,10,1,5,n=>n+' ans',"Nombre de cycles de prêt simulés."]];
+$('inputs').innerHTML=cfg.map(c=>`<div class="f"><label for="${c[0]}">${c[1]}<output id="o_${c[0]}"></output></label><input type="range" id="${c[0]}" min="${c[2]}" max="${c[3]}" step="${c[4]}" value="${c[5]}"><p>${c[7]}</p></div>`).join('');
+const P=[["Reprise d’études, emploi discontinu",90,8,75],["International, sans crédit américain",95,14,80],["Ancien combattant, revenus composites",85,20,60],["Dossier mince, signaux faibles",40,3,30],["Cas limite",65,10,55]];
+function sim(c0,L,pd,rec,cov,N,carry){let c=c0,s=0,cap=[c0],stu=[0],pay=[];for(let y=0;y<N;y++){const n=Math.floor(c/L+1e-9),d=n*L,rep=Math.round(d*(1-pd*(1-rec))),p=Math.round((d-rep)*cov);c=rep+p+(carry?c-d:0);s+=n;cap.push(c);stu.push(s);pay.push(p)}return{cap,stu,pay}}
+function score(){const w=[+$('w1').value,+$('w2').value,+$('w3').value],S=w[0]+w[1]+w[2]||1,th=+$('th').value;let h='',k=0,t=0;
+P.forEach(p=>{const s=(p[1]/100*w[0]+Math.min(p[2]/24,1)*w[1]+p[3]/100*w[2])/S,ok=s>=th;if(ok){k++;t+=s}
+h+=`<tr><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td><td>${p[3]}</td><td>${pc(s)}</td><td class="${ok?'ok':'no'}">${ok?'Approuvé':'Refusé'}</td></tr>`});
+$('sc').innerHTML=h;if(!k){$('scn').textContent='Aucun profil approuvé : baisse le seuil.';return null}
+const pd=1-t/k;$('scn').textContent=`${k} profils approuvés sur 5. Score moyen ${pc(t/k)}, soit un risque de défaut de ${pc(pd)}.`;return pd}
+function draw(A,B,N){const m=Math.max(...A.cap,...B.cap,1),X=y=>40+y*(280/N),Y=v=>170-v/m*145;
+const pl=(a,k)=>`<polyline class="${k}" fill="none" stroke-width="3" stroke-linejoin="round" points="${a.map((v,y)=>X(y)+','+Y(v)).join(' ')}"/>`;
+let g=[0,.5,1].map(f=>`<line class="g" x1="40" x2="320" y1="${Y(m*f)}" y2="${Y(m*f)}"/><text x="2" y="${Y(m*f)+4}">${Math.round(m*f/1000)} k</text>`).join('');
+for(let y=0;y<=N;y++)g+=`<text x="${X(y)-3}" y="192">${y}</text>`;
+$('ch').innerHTML=g+pl(A.cap,'a')+pl(B.cap,'b')+`<text class="ta" x="${X(N)-4}" y="${Y(A.cap[N])-8}" text-anchor="end">avec garantie</text><text class="tb" x="${X(N)-4}" y="${Y(B.cap[N])+18}" text-anchor="end">sans garantie</text>`}
+function render(){const sp=score();
+if($('link').checked&&sp!==null){$('pd').value=sp;$('pd').disabled=true}else{$('pd').disabled=false}
+cfg.forEach(c=>{$('o_'+c[0]).textContent=c[6](+$(c[0]).value)});
+const v=k=>+$(k).value,N=v('yrs'),cy=$('carry').checked;
+const A=sim(v('cap'),v('loan'),v('pd'),v('rec'),v('cov'),N,cy),B=sim(v('cap'),v('loan'),v('pd'),v('rec'),0,N,cy);
+const pv=(c)=>c/Math.pow(1+v('disc'),N),tot=A.pay.reduce((a,b)=>a+b,0);
+$('res').innerHTML=`<p class="big cb">Sans garantie : ${usd(B.cap[N])} après ${N} ans, ${B.stu[N].toLocaleString('fr-FR')} étudiants aidés.</p>
+<p class="big ca">Avec garantie : ${usd(A.cap[N])}, ${A.stu[N].toLocaleString('fr-FR')} étudiants aidés.</p>
+<p>Le garant verse ${usd(A.pay[0])} la première année, ${usd(tot)} au total. En valeur actuelle, le capital final vaut ${usd(pv(B.cap[N]))} sans garantie et ${usd(pv(A.cap[N]))} avec.</p>`;
+draw(A,B,N);
+$('tb').innerHTML=A.cap.map((c,y)=>`<tr><td>${y}</td><td>${usd(B.cap[y])}</td><td>${B.stu[y]}</td><td>${usd(c)}</td><td>${A.stu[y]}</td></tr>`).join('')}
+document.querySelectorAll('input').forEach(i=>i.addEventListener('input',render));
+render();
+</script>
+</body>
+</html>
